@@ -13,6 +13,12 @@ import {
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import type { OAuthMaterial } from "../mcp/mcp-oauth.js";
 import { McpOAuthBroker } from "../mcp/mcp-oauth.js";
+import {
+  AMP_ORIGIN,
+  AMP_TOKEN,
+  AmpApiEmulator,
+} from "../providers/cloud-agent/amp/amp-api-emulator.test-support.js";
+import { AmpCloudAgentProvider } from "../providers/cloud-agent/amp/amp-cloud-agent.js";
 import { CursorCloudAgentProvider } from "../providers/cloud-agent/cursor/cursor-cloud-agent.js";
 import { T3CodeConnections } from "../providers/cloud-agent/t3code/t3code-connections.js";
 import {
@@ -705,6 +711,29 @@ describePostgres("cloud agent lifecycle and recovery (PostgreSQL + Cursor emulat
     const requests = h.wire.requests.length;
     await h.poll(id);
     expect(h.wire.requests).toHaveLength(requests);
+    expect(await h.state(id)).toMatchObject({ status: "cancelled", followup: null });
+  });
+
+  it("refuses to cancel a running agent its provider cannot stop, but drops work it has not sent", async () => {
+    const h = await setup();
+    const wire = new AmpApiEmulator();
+    h.connection.provider = new AmpCloudAgentProvider({
+      apiKey: AMP_TOKEN,
+      project: "example/demo",
+      url: AMP_ORIGIN,
+      fetch: wire.fetch,
+    });
+    const id = await h.launch();
+    await h.poll(id);
+    expect(await h.tool("cancel", { id })).toHaveProperty("error");
+    expect(await h.state(id)).toMatchObject({ status: "running", cancelRequested: false });
+    wire.complete((await h.state(id)).remoteId!);
+    await h.poll(id);
+    await h.tool("reply", { id, prompt: "Tests" });
+    expect(await h.tool("cancel", { id })).not.toHaveProperty("error");
+    const requests = wire.requests.length;
+    await h.poll(id);
+    expect(wire.requests).toHaveLength(requests);
     expect(await h.state(id)).toMatchObject({ status: "cancelled", followup: null });
   });
 

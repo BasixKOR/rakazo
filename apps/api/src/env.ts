@@ -121,6 +121,9 @@ export interface AppEnv extends MessagingEnvironmentValues {
   cloudAgentProvider: string;
   cloudAgentSpaceId: string | undefined;
   cursorApiKey: string | undefined;
+  ampApiKey: string | undefined;
+  ampProject: string | undefined;
+  ampUrl: string | undefined;
   /** Raw PAYMENT_WALLET_* values; createPaymentWalletProvider resolves them. */
   paymentWalletProvider: string | undefined;
   paymentWalletClientId: string | undefined;
@@ -333,6 +336,9 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
     cloudAgentProvider,
     cloudAgentSpaceId: optional(source.CLOUD_AGENT_SPACE_ID),
     cursorApiKey: optional(source.CURSOR_API_KEY),
+    ampApiKey: optional(source.AMP_API_KEY),
+    ampProject: optional(source.AMP_PROJECT),
+    ampUrl: optional(source.AMP_URL),
     paymentWalletProvider: optional(source.PAYMENT_WALLET_PROVIDER),
     paymentWalletClientId: optional(source.PAYMENT_WALLET_CLIENT_ID),
     agentRuntime: source.AGENT_RUNTIME ?? "pi",

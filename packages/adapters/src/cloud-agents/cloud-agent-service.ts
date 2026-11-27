@@ -200,6 +200,15 @@ export async function executeCloudAgentTool(
       });
       if (!updated.count) return { error: "Cloud agent changed; check its status and try again." };
     } else if (name === "cloud_agent_cancel") {
+      // A cancel the provider cannot carry out would stay pending until the run ends by itself.
+      // What has not reached the provider yet is still cancelled here.
+      const remoteRunning =
+        agent.status === "running" &&
+        (agent.remoteId || agent.launchDispatched) &&
+        !(agent.followup && !agent.followupDispatchedAt);
+      const provider = remoteRunning ? (await cloudAgentFor(deps, agent))?.provider : undefined;
+      if (provider && !provider.describe().capabilities.cancel)
+        return { error: "This cloud agent can only be stopped from its own page." };
       await deps.prisma.cloudAgent.update({
         where: { id: agent.id },
         data: { cancelRequested: true, version: { increment: 1 }, nextPollAt: new Date() },

@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import type { CloudAgentProvider } from "@rakazo/adapter-kit";
+import { AmpCloudAgentProvider } from "../providers/cloud-agent/amp/amp-cloud-agent.js";
 import { CursorCloudAgentProvider } from "../providers/cloud-agent/cursor/cursor-cloud-agent.js";
 import { EmulatorCloudAgentProvider } from "./cloud-agent-emulator.js";
 import { resolveCloudAgentProvider } from "./cloud-agent-provider-env.js";
@@ -54,9 +55,21 @@ export function createCloudAgentConnection(
   if (kind === "emulator") {
     return { provider: new EmulatorCloudAgentProvider(), key: "emulator" };
   }
+  const spaceId = source.CLOUD_AGENT_SPACE_ID?.trim();
+  if (kind === "amp") {
+    const apiKey = source.AMP_API_KEY!.trim();
+    return {
+      provider: new AmpCloudAgentProvider({
+        apiKey,
+        project: source.AMP_PROJECT!,
+        url: source.AMP_URL,
+      }),
+      key: `amp:${createHash("sha256").update(apiKey).digest("hex")}`,
+      spaceId,
+    };
+  }
   if (kind !== "cursor") return null;
   const apiKey = source.CURSOR_API_KEY!.trim();
-  const spaceId = source.CLOUD_AGENT_SPACE_ID!.trim();
   return {
     provider: new CursorCloudAgentProvider({ apiKey }),
     key: `cursor:${createHash("sha256").update(apiKey).digest("hex")}`,
