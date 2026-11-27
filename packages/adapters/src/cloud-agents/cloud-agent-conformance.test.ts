@@ -1,5 +1,11 @@
 import type { AdapterContext, CloudAgentProvider } from "@rakazo/adapter-kit";
 import { describe, expect, it } from "vitest";
+import {
+  AMP_ORIGIN,
+  AMP_TOKEN,
+  AmpApiEmulator,
+} from "../providers/cloud-agent/amp/amp-api-emulator.test-support.js";
+import { AmpCloudAgentProvider } from "../providers/cloud-agent/amp/amp-cloud-agent.js";
 import { CursorCloudAgentProvider } from "../providers/cloud-agent/cursor/cursor-cloud-agent.js";
 import { T3CodeCloudAgentProvider } from "../providers/cloud-agent/t3code/t3code-cloud-agent.js";
 import {
@@ -30,12 +36,17 @@ const providers: Array<{
   busyReply: "rejects" | "queues";
   /** T3 Code may start the next run itself once one finishes, so a newer active run is followed. */
   followsNewerRun: boolean;
+  /** Amp reports no branch or pull request and cannot stop a thread through its API. */
+  reportsPullRequest: boolean;
+  cancels: boolean;
   create: () => Emulated;
 }> = [
   {
     name: "Cursor",
     busyReply: "rejects",
     followsNewerRun: false,
+    reportsPullRequest: true,
+    cancels: true,
     create() {
       const provider = new EmulatorCloudAgentProvider(
         new CursorCloudAgentEmulator({ autoFinishAfterGets: null }),
@@ -50,6 +61,8 @@ const providers: Array<{
     name: "T3 Code MCP",
     busyReply: "queues",
     followsNewerRun: true,
+    reportsPullRequest: true,
+    cancels: true,
     create() {
       const emulator = new T3McpEmulator();
       return {
@@ -63,11 +76,30 @@ const providers: Array<{
       };
     },
   },
+  {
+    name: "Amp",
+    busyReply: "queues",
+    followsNewerRun: true,
+    reportsPullRequest: false,
+    cancels: false,
+    create() {
+      const emulator = new AmpApiEmulator();
+      return {
+        provider: new AmpCloudAgentProvider({
+          apiKey: AMP_TOKEN,
+          project: "example/demo",
+          url: AMP_ORIGIN,
+          fetch: emulator.fetch,
+        }),
+        complete: (id, failed = false) => emulator.complete(id, failed ? "error" : "idle"),
+      };
+    },
+  },
 ];
 
 describe.each(providers)(
   "cloud agent conformance over the $name wire emulator (offline)",
-  ({ create, busyReply, followsNewerRun }) => {
+  ({ create, busyReply, followsNewerRun, reportsPullRequest, cancels }) => {
     it("replays launch without duplicate agents and preserves a finished run through a follow-up", async () => {
       const { provider, complete } = create();
       const request = {
@@ -81,17 +113,25 @@ describe.each(providers)(
       expect((await provider.launch(request, ctx)).id).toBe(first.id);
       complete(first.id);
       const done = await provider.get(first.id, ctx);
-      expect(done).toMatchObject({ status: "finished", branch: "emulator/task" });
-      expect(done.prUrl).toContain("/pull/");
+      expect(done.status).toBe("finished");
+      if (reportsPullRequest) {
+        expect(done.branch).toBe("emulator/task");
+        expect(done.prUrl).toContain("/pull/");
+      }
       const followup = await provider.reply(first.id, { prompt: "Also add tests" }, ctx);
       expect(followup.latestRunId).not.toBe(first.latestRunId);
       expect((await provider.get(first.id, ctx, first.latestRunId)).status).toBe(
         followsNewerRun ? "running" : "finished",
       );
       expect((await provider.get(first.id, ctx, followup.latestRunId)).status).toBe("running");
-      // A run may end only once the agent stops; the poll asks again until it has.
-      expect(["running", "cancelled"]).toContain((await provider.cancel(first.id, ctx)).status);
-      expect((await provider.cancel(first.id, ctx)).status).toBe("cancelled");
+      if (cancels) {
+        // A run may end only once the agent stops; the poll asks again until it has.
+        expect(["running", "cancelled"]).toContain((await provider.cancel(first.id, ctx)).status);
+        expect((await provider.cancel(first.id, ctx)).status).toBe("cancelled");
+      } else {
+        // Without a way to stop it, cancel reports the run as it stands and never claims success.
+        expect((await provider.cancel(first.id, ctx)).status).toBe("running");
+      }
     });
     it(`${busyReply === "rejects" ? "rejects" : "queues"} a follow-up while busy and observes failures`, async () => {
       const { provider, complete } = create();
@@ -135,6 +175,9 @@ describe("cloud agent composition", () => {
       { CLOUD_AGENT_PROVIDER: "bogus" },
       { CLOUD_AGENT_PROVIDER: "cursor" },
       { CLOUD_AGENT_PROVIDER: "cursor", CURSOR_API_KEY: "fake-key" },
+      { CLOUD_AGENT_PROVIDER: "amp", AMP_API_KEY: "fake-key", CLOUD_AGENT_SPACE_ID: "test-space" },
+      { CLOUD_AGENT_PROVIDER: "amp", AMP_PROJECT: "example/demo", CLOUD_AGENT_SPACE_ID: "test" },
+      { CLOUD_AGENT_PROVIDER: "amp", AMP_API_KEY: "fake-key", AMP_PROJECT: "example/demo" },
     ]) {
       expect(resolveCloudAgentProvider(source)).toBe("none");
       expect(createCloudAgentConnection(source)).toBeNull();

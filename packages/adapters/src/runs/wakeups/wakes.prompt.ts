@@ -18,3 +18,8 @@ export function cloudAgentWakePrompt(agentId: string, status: string): string {
 
 /** Appended to a cloud agent's task when the bot asks it to open a pull request. */
 export const CLOUD_AGENT_OPEN_PR = "When you finish, open a pull request with your changes.";
+
+/** Appended to a cloud agent's task when its provider cannot pick the repository itself. */
+export function cloudAgentRepositoryPrompt(repository: string): string {
+  return `Work in the repository ${repository}.`;
+}

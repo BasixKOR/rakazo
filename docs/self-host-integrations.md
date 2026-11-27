@@ -331,7 +331,7 @@ the Integrations screen are a separate connection from this messaging surface.
 
 Cloud agents delegate a repository task to a hosted coding agent and track its result in the bot's chat. They are separate from the bot computer and its in-turn subagents. Web, Electron, and mobile show the same status and pull-request link.
 
-The default is `CLOUD_AGENT_PROVIDER=none`. Core workflows do not require Cursor or any other hosted coding provider.
+The default is `CLOUD_AGENT_PROVIDER=none`. Core workflows do not require Cursor, Amp or any other hosted coding provider.
 
 ### Enable Cursor
 
@@ -344,6 +344,21 @@ CURSOR_API_KEY=replace-with-your-key
 ```
 
 The key and explicit Space ID are both required. Use a credential whose connected repositories may be accessed by members of that Space. Each created agent is additionally bound to its initiating user; another user cannot inspect, reply to, or cancel it by supplying an agent ID. The deployment key is never a model tool argument.
+
+### Enable Amp
+
+Agents run as Amp threads in an orb, as the owner of an Amp personal access token and on their Amp credits. Create the token in Amp under **Settings → Access Tokens** with the `amp.api:threads:read` and `amp.api:threads:write` scopes, then configure the API and worker with the same values:
+
+```dotenv
+CLOUD_AGENT_PROVIDER=amp
+CLOUD_AGENT_SPACE_ID=example-space-id
+AMP_API_KEY=replace-with-your-token
+AMP_PROJECT=example-namespace/example-project
+```
+
+The token, project and Space ID are all required. `AMP_PROJECT` is the Amp project, by `namespace/name` or ID, that every new thread starts in. A launch's repository is passed to the agent in its task. If your Amp workspace requires a custom domain, set `AMP_URL` to it, such as `https://amp.example.com`.
+
+Amp's API cannot stop a thread, so `cloud_agent_cancel` is refused while an Amp agent runs; stop it from the thread in Amp. A follow-up that has not been sent yet can still be cancelled. Images are not supported, and cards show no branch or pull-request link: open the thread to see them. Rakazo labels each thread it starts so a retried launch finds it instead of starting another.
 
 ### Connect T3 Code
 

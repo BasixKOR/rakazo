@@ -16,6 +16,7 @@ function previousWorkerValues(source: NodeJS.ProcessEnv) {
     encryptionKey: resolveEncryptionKey(source),
     composioApiKey: source.COMPOSIO_API_KEY,
     cursorApiKey: source.CURSOR_API_KEY,
+    ampApiKey: source.AMP_API_KEY,
     deploymentModelKey: key,
     deploymentModelConfigured: configured,
     // The API's ambient team-chat judge settings, which the worker's jobs now use too.

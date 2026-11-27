@@ -88,6 +88,7 @@ export interface RunRuntimeEnv extends PipedreamEnvironmentValues {
   dataDir: string;
   composioApiKey: string | undefined;
   cursorApiKey: string | undefined;
+  ampApiKey: string | undefined;
   deploymentModelKey: string | undefined;
   deploymentModelConfigured: boolean;
   /** The deployment model, which judges ambient team-chat messages unless overridden. */
@@ -122,6 +123,7 @@ export function runRuntimeEnvFromProcess(source: NodeJS.ProcessEnv): RunRuntimeE
     encryptionKey: resolveEncryptionKey(source),
     composioApiKey: source.COMPOSIO_API_KEY,
     cursorApiKey: source.CURSOR_API_KEY,
+    ampApiKey: source.AMP_API_KEY,
     deploymentModelKey: deploymentModel.key,
     deploymentModelConfigured: deploymentModel.configured,
     defaultProvider: deploymentModel.provider,
@@ -322,6 +324,7 @@ export function createRunRuntime(
       localModelsApiKey() ?? "",
       env.composioApiKey ?? "",
       env.cursorApiKey ?? "",
+      env.ampApiKey ?? "",
       process.env.TYPESAFE_API_KEY ?? "",
     ].filter(Boolean),
     mcpAllowPrivateEndpoint: env.mcpAllowPrivateEndpoint,

@@ -949,6 +949,7 @@ async function main() {
                 deploymentModelKey: undefined,
                 composioApiKey: undefined,
                 cursorApiKey: undefined,
+                ampApiKey: undefined,
                 cloudAgentProvider: "none",
                 signupsEnabled: "true",
                 signupAllowlist: "",

@@ -1,6 +1,6 @@
 /**
- * Empty / unknown / cursor-without-key becomes none so the API still boots and
- * cloud-agent tools stay uninjected.
+ * Empty / unknown / a live provider without its key, project or Space becomes none so the API
+ * still boots and cloud-agent tools stay uninjected.
  */
 export function resolveCloudAgentProvider(source: NodeJS.ProcessEnv = process.env): string {
   const configured = source.CLOUD_AGENT_PROVIDER;
@@ -11,6 +11,13 @@ export function resolveCloudAgentProvider(source: NodeJS.ProcessEnv = process.en
   if (requested === "cursor") {
     return optional(source.CURSOR_API_KEY) && optional(source.CLOUD_AGENT_SPACE_ID)
       ? "cursor"
+      : "none";
+  }
+  if (requested === "amp") {
+    return optional(source.AMP_API_KEY) &&
+      optional(source.AMP_PROJECT) &&
+      optional(source.CLOUD_AGENT_SPACE_ID)
+      ? "amp"
       : "none";
   }
   // Soft-fall: do not throw at API boot for typos / future vendor names.
