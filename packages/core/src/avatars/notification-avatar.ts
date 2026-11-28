@@ -38,7 +38,7 @@ export function notificationAvatarSource(bot: {
     bot.id,
     parsed && "color" in parsed ? parsed.color : bot.color,
   ).hex;
-  // The push is flattened onto white, so the eyes are inked for a light page.
+  // The push has no page behind it, so the eyes take the light theme's inks.
   let viewBox: string;
   let body: string;
   if (parsed?.kind === "shape") {
